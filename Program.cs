@@ -37,6 +37,17 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddControllers();
+
+// Cors
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendReactApp",
+        builder => builder
+        .WithOrigins("http://localhost:3000")
+        .AllowAnyHeader()
+        .AllowAnyOrigin());
+});
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -54,6 +65,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("FrontendReactApp");
 
 app.UseAuthentication();
 app.UseAuthorization();

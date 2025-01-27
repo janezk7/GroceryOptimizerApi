@@ -48,6 +48,7 @@ namespace GroceryOptimizerApi.Controllers
             {
                 var authClaims = new[]
                 {
+                    new Claim("UserId", user.UserId.ToString()),
                     new Claim(ClaimTypes.Name, user.UserName),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 };
@@ -64,6 +65,7 @@ namespace GroceryOptimizerApi.Controllers
 
                 return Ok(new
                 {
+                    name = user.UserName,
                     token = new JwtSecurityTokenHandler().WriteToken(token),
                     expiration = token.ValidTo
                 });

@@ -5,6 +5,7 @@ using GroceryOptimizerApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using System.Security.Claims;
 
 namespace GroceryOptimizerApi.Controllers
 {
@@ -30,6 +31,19 @@ namespace GroceryOptimizerApi.Controllers
                 var articles = await connection.QueryAsync<Article>(query);
 
                 return Ok(articles);
+            }
+        }
+
+        [HttpGet("PriceUnits")]
+        public async Task<ActionResult<IEnumerable<PriceUnit>>> GetPriceUnits()
+        {
+            using (var connection = new NpgsqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                var query = @"select id, unitname, shortname from priceunit";
+                var priceUnits = await connection.QueryAsync<PriceUnit>(query);
+
+                return Ok(priceUnits);
             }
         }
 
@@ -85,6 +99,46 @@ namespace GroceryOptimizerApi.Controllers
                 var pricings = await connection.QueryAsync<ArticleShopPricingDto>(query, new { ArticleId = articleId });
 
                 return Ok(pricings);
+            }
+        }
+
+        [HttpPost("Create")]
+        [Authorize]
+        public async Task<ActionResult<int>> CreateArticle([FromBody] CreateArticleRequestModel request)
+        {
+            try
+            {
+                var identity = HttpContext.User.Identity as ClaimsIdentity;
+                int userId = int.Parse(identity.FindFirst("UserId").Value);
+
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    var existingEntryQuery = @"SELECT 1 FROM article where LOWER(name) = LOWER('@Name')";
+                    var existingRows = await connection.ExecuteScalarAsync<int>(existingEntryQuery, new { Id = request.Name });
+                    if (existingRows != 0)
+                        throw new Exception($"{request.Name} already exists");
+
+                    var insertQuery = @"
+                        INSERT INTO article (userid, name, priceunitid, note)
+                        VALUES (@UserId, @Name, @PriceUnitId, @Note)
+                        RETURNING id;";
+
+                    var insertedId = await connection.ExecuteScalarAsync<int>(insertQuery, new
+                    {
+                        UserId = userId,
+                        Name = request.Name,
+                        PriceUnitId = request.PriceUnitId,
+                        Note = request.Note
+                    });
+
+                    return Ok(insertedId);
+                }
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(ex);
             }
         }
 

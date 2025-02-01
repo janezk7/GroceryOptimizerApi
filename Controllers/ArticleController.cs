@@ -17,43 +17,65 @@ namespace GroceryOptimizerApi.Controllers
         private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection");
         private readonly ILogger<ArticleController> _logger = logger;
 
+        [HttpGet("ApiTest")]
+        public async Task<IActionResult> Test()
+        {
+            return Ok("API OK.");
+        }
+
         [HttpGet("Articles")]
         public async Task<ActionResult<IEnumerable<Article>>> GetArticles()
         {
-            using (var connection = new NpgsqlConnection(_connectionString))
+            try
             {
-                await connection.OpenAsync();
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
 
-                // Get user id from claims
-                //var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                    // Get user id from claims
+                    //var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
-                var query = "SELECT Id, UserId, Name, Note FROM Article";
-                var articles = await connection.QueryAsync<Article>(query);
+                    var query = "SELECT Id, UserId, Name, Note FROM Article";
+                    var articles = await connection.QueryAsync<Article>(query);
 
-                return Ok(articles);
+                    return Ok(articles);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 
         [HttpGet("PriceUnits")]
         public async Task<ActionResult<IEnumerable<PriceUnit>>> GetPriceUnits()
         {
-            using (var connection = new NpgsqlConnection(_connectionString))
+            try
             {
-                await connection.OpenAsync();
-                var query = @"select id, unitname, shortname from priceunit";
-                var priceUnits = await connection.QueryAsync<PriceUnit>(query);
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var query = @"select id, unitname, shortname from priceunit";
+                    var priceUnits = await connection.QueryAsync<PriceUnit>(query);
 
-                return Ok(priceUnits);
+                    return Ok(priceUnits);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 
         [HttpGet("ArticleDetails")]
         public async Task<ActionResult<Article>> GetArticle(int articleId)
         {
-            using (var connection = new NpgsqlConnection(_connectionString))
+            try
             {
-                await connection.OpenAsync();
-                var query = @"SELECT 
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var query = @"SELECT 
 	                article.id, 
 	                userid as AddedByUserId,
 	                priceunitid,
@@ -66,19 +88,26 @@ namespace GroceryOptimizerApi.Controllers
                 INNER JOIN ""AspNetUsers"" u ON u.""UserId"" = Article.userid
                 INNER JOIN priceunit ON priceunit.id = Article.priceunitid
                 WHERE article.id = @Id";
-                var article = await connection.QuerySingleOrDefaultAsync<ArticleDto>(query, new { Id = articleId });
+                    var article = await connection.QuerySingleOrDefaultAsync<ArticleDto>(query, new { Id = articleId });
 
-                return Ok(article);
+                    return Ok(article);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 
         [HttpGet("LatestArticlePricing")]
         public async Task<ActionResult<IEnumerable<ArticleShopPricing>>> GetLatestArticlePricings(int articleId)
         {
-            using (var connection = new NpgsqlConnection(_connectionString))
+            try
             {
-                await connection.OpenAsync();
-                var query = @"
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var query = @"
                     SELECT DISTINCT ON (asp.ArticleId, asp.ShopId) 
                         asp.""Id"", 
                         asp.ArticleId, 
@@ -96,9 +125,14 @@ namespace GroceryOptimizerApi.Controllers
                     WHERE asp.ArticleId = @ArticleId
                     ORDER BY asp.ArticleId, asp.ShopId, asp.dateinserted DESC;";
 
-                var pricings = await connection.QueryAsync<ArticleShopPricingDto>(query, new { ArticleId = articleId });
+                    var pricings = await connection.QueryAsync<ArticleShopPricingDto>(query, new { ArticleId = articleId });
 
-                return Ok(pricings);
+                    return Ok(pricings);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 
@@ -136,7 +170,7 @@ namespace GroceryOptimizerApi.Controllers
                     return Ok(insertedId);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
@@ -145,25 +179,32 @@ namespace GroceryOptimizerApi.Controllers
         [HttpPost("AddArticleShopPricing")]
         public async Task<ActionResult<string>> AddArticleShopPricing([FromBody] UpdatePricingRequestModel request)
         {
-            using (var connection = new NpgsqlConnection(_connectionString))
+            try
             {
-                await connection.OpenAsync();
+                using (var connection = new NpgsqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
 
-                var insertQuery = @"
+                    var insertQuery = @"
                     INSERT INTO articleshoppricing (articleid, shopid, priceperunit, dateinserted)
                     VALUES (@ArticleId, @ShopId, @PricePerUnit, NOW());";
 
-                var affectedRows = await connection.ExecuteAsync(insertQuery, new
-                {
-                    ArticleId = request.ArticleId,
-                    ShopId = request.ShopId,
-                    PricePerUnit = request.PricePerUnit
-                });
+                    var affectedRows = await connection.ExecuteAsync(insertQuery, new
+                    {
+                        ArticleId = request.ArticleId,
+                        ShopId = request.ShopId,
+                        PricePerUnit = request.PricePerUnit
+                    });
 
-                if (affectedRows == 0)
-                    return BadRequest("Failed to add pricing.");
+                    if (affectedRows == 0)
+                        return BadRequest("Failed to add pricing.");
 
-                return Ok("Pricing added successfully.");
+                    return Ok("Pricing added successfully.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 

@@ -25,52 +25,66 @@ namespace GroceryOptimizerApi.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
-            var user = new ApplicationUser
+            try
             {
-                UserName = model.Username,
-                Email = model.Email
-            };
-            var result = await _userManager.CreateAsync(user, model.Password);
+                var user = new ApplicationUser
+                {
+                    UserName = model.Username,
+                    Email = model.Email
+                };
+                var result = await _userManager.CreateAsync(user, model.Password);
 
-            if (result.Succeeded)
-            {
-                return Ok(new { Message = "User registered successfully!" });
+                if (result.Succeeded)
+                {
+                    return Ok(new { Message = "User registered successfully!" });
+                }
+
+                return BadRequest(result.Errors);
             }
-
-            return BadRequest(result.Errors);
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            var user = await _userManager.FindByNameAsync(model.Username);
-            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
+            try
             {
-                var authClaims = new[]
+                var user = await _userManager.FindByNameAsync(model.Username);
+                if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
                 {
+                    var authClaims = new[]
+                    {
                     new Claim("UserId", user.UserId.ToString()),
                     new Claim(ClaimTypes.Name, user.UserName),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 };
 
-                var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+                    var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
 
-                var token = new JwtSecurityToken(
-                    issuer: _configuration["Jwt:Issuer"],
-                    audience: _configuration["Jwt:Audience"],
-                    expires: DateTime.Now.AddHours(3),
-                    claims: authClaims,
-                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-                );
+                    var token = new JwtSecurityToken(
+                        issuer: _configuration["Jwt:Issuer"],
+                        audience: _configuration["Jwt:Audience"],
+                        expires: DateTime.Now.AddHours(3),
+                        claims: authClaims,
+                        signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+                    );
 
-                return Ok(new
-                {
-                    name = user.UserName,
-                    token = new JwtSecurityTokenHandler().WriteToken(token),
-                    expiration = token.ValidTo
-                });
+                    return Ok(new
+                    {
+                        name = user.UserName,
+                        token = new JwtSecurityTokenHandler().WriteToken(token),
+                        expiration = token.ValidTo
+                    });
+                }
+                return Unauthorized();
             }
-            return Unauthorized();
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

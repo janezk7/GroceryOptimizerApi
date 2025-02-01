@@ -115,8 +115,8 @@ namespace GroceryOptimizerApi.Controllers
                 {
                     await connection.OpenAsync();
 
-                    var existingEntryQuery = @"SELECT 1 FROM article where LOWER(name) = LOWER('@Name')";
-                    var existingRows = await connection.ExecuteScalarAsync<int>(existingEntryQuery, new { Id = request.Name });
+                    var existingEntryQuery = @"SELECT COUNT(1) FROM article where LOWER(name) = LOWER(@Name)";
+                    var existingRows = await connection.ExecuteScalarAsync<int>(existingEntryQuery, new { Name = request.Name });
                     if (existingRows != 0)
                         throw new Exception($"{request.Name} already exists");
 
@@ -138,7 +138,7 @@ namespace GroceryOptimizerApi.Controllers
             }
             catch(Exception ex)
             {
-                return BadRequest(ex);
+                return BadRequest(ex.Message);
             }
         }
 

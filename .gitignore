@@ -413,3 +413,5 @@ FodyWeavers.xsd
 
 # End of https://www.toptal.com/developers/gitignore/api/dotnetcore,visualstudio
 Properties/ServiceDependencies/groceryoptimizer-api-app - Web Deploy/profile.arm.json
+.env.development
+.env.production
